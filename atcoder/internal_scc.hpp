@@ -21,37 +21,61 @@ struct scc_graph {
 
     void add_edge(int from, int to) { edges.push_back({from, {to}}); }
 
+    void dfs(int v, csr<atcoder::internal::scc_graph::edge> &g, std::vector<int> &visited, std::vector<int> &low, std::vector<int> &ord, std::vector<int> &ids, int &now_ord, int &group_num){
+        low[v] = ord[v] = now_ord++;
+        visited.push_back(v);
+        for (int i = g.start[v]; i < g.start[v + 1]; i++) {
+            auto to = g.elist[i].to;
+            if (ord[to] == -1) {
+                dfs(to, g, visited, low, ord, ids, now_ord, group_num);
+                low[v] = std::min(low[v], low[to]);
+            } else {
+                low[v] = std::min(low[v], ord[to]);
+            }
+        }
+        if (low[v] == ord[v]) {
+            while (true) {
+                int u = visited.back();
+                visited.pop_back();
+                ord[u] = _n;
+                ids[u] = group_num;
+                if (u == v) break;
+            }
+            group_num++;
+        }
+    };
+
     // @return pair of (# of scc, scc id)
     std::pair<int, std::vector<int>> scc_ids() {
         auto g = csr<edge>(_n, edges);
         int now_ord = 0, group_num = 0;
         std::vector<int> visited, low(_n), ord(_n, -1), ids(_n);
         visited.reserve(_n);
-        auto dfs = [&](auto self, int v) -> void {
-            low[v] = ord[v] = now_ord++;
-            visited.push_back(v);
-            for (int i = g.start[v]; i < g.start[v + 1]; i++) {
-                auto to = g.elist[i].to;
-                if (ord[to] == -1) {
-                    self(self, to);
-                    low[v] = std::min(low[v], low[to]);
-                } else {
-                    low[v] = std::min(low[v], ord[to]);
-                }
-            }
-            if (low[v] == ord[v]) {
-                while (true) {
-                    int u = visited.back();
-                    visited.pop_back();
-                    ord[u] = _n;
-                    ids[u] = group_num;
-                    if (u == v) break;
-                }
-                group_num++;
-            }
-        };
+        // auto dfs = [&](auto self, int v) -> void {
+        //     low[v] = ord[v] = now_ord++;
+        //     visited.push_back(v);
+        //     for (int i = g.start[v]; i < g.start[v + 1]; i++) {
+        //         auto to = g.elist[i].to;
+        //         if (ord[to] == -1) {
+        //             self(self, to);
+        //             low[v] = std::min(low[v], low[to]);
+        //         } else {
+        //             low[v] = std::min(low[v], ord[to]);
+        //         }
+        //     }
+        //     if (low[v] == ord[v]) {
+        //         while (true) {
+        //             int u = visited.back();
+        //             visited.pop_back();
+        //             ord[u] = _n;
+        //             ids[u] = group_num;
+        //             if (u == v) break;
+        //         }
+        //         group_num++;
+        //     }
+        // };
         for (int i = 0; i < _n; i++) {
-            if (ord[i] == -1) dfs(dfs, i);
+            if (ord[i] == -1) dfs(i, g, visited, low, ord, ids, now_ord, group_num);
         }
         for (auto& x : ids) {
             x = group_num - 1 - x;

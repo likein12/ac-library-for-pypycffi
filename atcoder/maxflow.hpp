@@ -60,6 +60,24 @@ template <class Cap> struct mf_graph {
         _re.cap = new_flow;
     }
 
+    Cap dfs(int v, Cap up, int s, std::vector<int> &level, std::vector<int> &iter) {
+        if (v == s) return up;
+        Cap res = 0;
+        int level_v = level[v];
+        for (int& i = iter[v]; i < int(g[v].size()); i++) {
+            _edge& e = g[v][i];
+            if (level_v <= level[e.to] || g[e.to][e.rev].cap == 0) continue;
+            Cap d = dfs(e.to, std::min(up - res, g[e.to][e.rev].cap), s, level, iter);
+            if (d <= 0) continue;
+            g[v][i].cap += d;
+            g[e.to][e.rev].cap -= d;
+            res += d;
+            if (res == up) return res;
+        }
+        level[v] = _n;
+        return res;
+    }
+
     Cap flow(int s, int t) {
         return flow(s, t, std::numeric_limits<Cap>::max());
     }
@@ -87,31 +105,31 @@ template <class Cap> struct mf_graph {
                 }
             }
         };
-        auto dfs = [&](auto self, int v, Cap up) {
-            if (v == s) return up;
-            Cap res = 0;
-            int level_v = level[v];
-            for (int& i = iter[v]; i < int(g[v].size()); i++) {
-                _edge& e = g[v][i];
-                if (level_v <= level[e.to] || g[e.to][e.rev].cap == 0) continue;
-                Cap d =
-                    self(self, e.to, std::min(up - res, g[e.to][e.rev].cap));
-                if (d <= 0) continue;
-                g[v][i].cap += d;
-                g[e.to][e.rev].cap -= d;
-                res += d;
-                if (res == up) return res;
-            }
-            level[v] = _n;
-            return res;
-        };
+        // auto dfs = [&](auto self, int v, Cap up) {
+        //     if (v == s) return up;
+        //     Cap res = 0;
+        //     int level_v = level[v];
+        //     for (int& i = iter[v]; i < int(g[v].size()); i++) {
+        //         _edge& e = g[v][i];
+        //         if (level_v <= level[e.to] || g[e.to][e.rev].cap == 0) continue;
+        //         Cap d =
+        //             self(self, e.to, std::min(up - res, g[e.to][e.rev].cap));
+        //         if (d <= 0) continue;
+        //         g[v][i].cap += d;
+        //         g[e.to][e.rev].cap -= d;
+        //         res += d;
+        //         if (res == up) return res;
+        //     }
+        //     level[v] = _n;
+        //     return res;
+        // };
 
         Cap flow = 0;
         while (flow < flow_limit) {
             bfs();
             if (level[t] == -1) break;
             std::fill(iter.begin(), iter.end(), 0);
-            Cap f = dfs(dfs, t, flow_limit - flow);
+            Cap f = dfs(t, flow_limit - flow, s, level, iter);
             if (!f) break;
             flow += f;
         }
